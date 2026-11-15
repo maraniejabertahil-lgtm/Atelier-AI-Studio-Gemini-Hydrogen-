@@ -349,6 +349,7 @@ return {
         systemInstruction: DEFAULT_SYSTEM_INSTRUCTION,
         activeSkillIds: ['skill-human-partner'],
         activeToolIds: ['tool-math-eval', 'tool-text-analyzer', 'tool-plan-steps'],
+        activePluginIds: [
         'plugin-skill-router',
         'plugin-studio-memory',
         'plugin-google-search',
