@@ -8,6 +8,7 @@ import {
   Edit3,
   ExternalLink,
   FileText,
+  Film,
   Globe,
   Mic,
   Moon,
@@ -40,8 +41,10 @@ import type {
 } from '../types';
 import { getLocalModelSpec, isLocalModel, LOCAL_MODEL_SPECS } from '../lib/localModels';
 import { extractSkillBody, selectAutoRoutedSkills } from '../lib/skillRouter';
+import { extractFramesFromVideoFile, extractFramesFromZipFile } from '../lib/videoFrames';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { LiveVoiceModal } from './LiveVoiceModal';
+import { VisionaryModal } from './VisionaryModal';
 
 interface PromptLabViewProps {
   state: StudioState;
@@ -208,6 +211,7 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showInsertMenu, setShowInsertMenu] = useState(false);
   const [liveVoiceOpen, setLiveVoiceOpen] = useState(false);
+  const [visionaryOpen, setVisionaryOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
   const [speakingMsgId, setSpeakingMsgId] = useState<string | null>(null);
   const [isDictating, setIsDictating] = useState(false);
@@ -267,9 +271,37 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
 
   const handleFilePick = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length === 0) return;
+
     const next: ChatAttachment[] = [];
+    setStreamError(null);
 
     for (const file of files) {
+      if (/\.zip$/i.test(file.name)) {
+        try {
+          const res = await extractFramesFromZipFile(file, 16);
+          next.push(...res.frames);
+        } catch (err) {
+          setStreamError(
+            err instanceof Error ? err.message : `Could not extract images from ${file.name}.`
+          );
+        }
+        continue;
+      }
+
+      if (file.type.startsWith('video/') || /\.(mp4|mov|webm|mkv|avi)$/i.test(file.name)) {
+        try {
+          const res = await extractFramesFromVideoFile(file, { fps: 1, maxFrames: 12 });
+          next.push(...res.frames);
+        } catch (err) {
+          setStreamError(
+            err instanceof Error ? err.message : `Could not extract frames from ${file.name}.`
+          );
+        }
+        continue;
+      }
+
       const isText =
         file.type.startsWith('text/') ||
         /\.(md|markdown|json|ts|tsx|js|jsx|py|csv|yaml|yml|xml|sql)$/i.test(file.name);
@@ -304,8 +336,9 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
       }
     }
 
-    setAttachments((prev) => [...prev, ...next]);
-    e.target.value = '';
+    if (next.length > 0) {
+      setAttachments((prev) => [...prev, ...next]);
+    }
   };
 
   const ensureLocalWorker = () => {
@@ -545,10 +578,12 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
   const runPrompt = async (
     overridePrompt?: string,
     replaceFromMessageId?: string,
-    overrideAttachments?: ChatAttachment[]
+    overrideAttachments?: ChatAttachment[],
+    overrideModel?: GeminiModelId
   ) => {
     const textToSend = (overridePrompt ?? promptText).trim();
     const filesToSend = overrideAttachments ?? attachments;
+    const effectiveModel = overrideModel ?? activeSession.model;
     if ((!textToSend && filesToSend.length === 0) || isStreaming) return;
 
     setStreamError(null);
@@ -564,7 +599,7 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
       setAttachments([]);
     }
 
-    if (isLocalModel(activeSession.model)) {
+    if (isLocalModel(effectiveModel)) {
       await runLocalPrompt(textToSend, filesToSend, replaceFromMessageId);
       return;
     }
@@ -584,7 +619,7 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
           attachments: filesToSend,
           replaceFromMessageId,
           sessionOverride: {
-            model: activeSession.model,
+            model: effectiveModel,
             thinkingLevel: activeSession.thinkingLevel,
             systemInstruction: activeSession.systemInstruction,
             activeSkillIds: activeSession.activeSkillIds,
@@ -1412,16 +1447,25 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
                 className="w-full px-4 pt-3 pb-2 bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none resize-none"
               />
 
-              <div className="px-3 pb-2.5 flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5">
+              <div className="px-3 pb-2.5 flex flex-wrap items-center justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-1">
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    title="Attach image or text/markdown file"
+                    title="Attach image, video, .zip frames, or text/markdown file"
                     className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 cursor-pointer"
                   >
                     <Paperclip className="w-3.5 h-3.5" />
                     <span>Attach</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVisionaryOpen(true)}
+                    title="Visionary Module: slice video, ZIP frames, or inspect YouTube links"
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 cursor-pointer"
+                  >
+                    <Film className="w-3.5 h-3.5" />
+                    <span>Visionary</span>
                   </button>
                   <button
                     type="button"
@@ -1979,6 +2023,22 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
         sessionId={activeSession.id}
         voiceName={activeSession.voiceName || 'Zephyr'}
         onClose={() => setLiveVoiceOpen(false)}
+      />
+
+      <VisionaryModal
+        isOpen={visionaryOpen}
+        onClose={() => setVisionaryOpen(false)}
+        currentModel={activeSession.model}
+        onSwitchToVisionModel={() => handleModelChange('gemini-4-hydrogen')}
+        onSendToStudio={(visionPrompt, frameAttachments) => {
+          const targetModel: GeminiModelId = isLocalModel(activeSession.model)
+            ? 'gemini-4-hydrogen'
+            : activeSession.model;
+          if (isLocalModel(activeSession.model)) {
+            handleModelChange('gemini-4-hydrogen');
+          }
+          runPrompt(visionPrompt, undefined, frameAttachments, targetModel);
+        }}
       />
     </div>
   );

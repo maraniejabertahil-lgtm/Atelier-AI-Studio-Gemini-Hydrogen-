@@ -100,9 +100,12 @@ export function buildZipBuffer(entries: ZipEntry[]): Buffer {
   return Buffer.concat([...localChunks, centralDirBuf, eocd]);
 }
 
-export function extractZipTextEntries(
-  zipBuffer: Buffer
-): Array<{ path: string; content: string }> {
+export interface ZipBinaryEntry {
+  path: string;
+  data: Buffer;
+}
+
+export function extractZipBinaryEntries(zipBuffer: Buffer): ZipBinaryEntry[] {
   // Locate End of Central Directory (EOCD) scanning backward from end
   let eocdOffset = -1;
   const minOffset = Math.max(0, zipBuffer.length - 65557);
@@ -119,7 +122,7 @@ export function extractZipTextEntries(
   const totalEntries = zipBuffer.readUInt16LE(eocdOffset + 10);
   const centralDirOffset = zipBuffer.readUInt32LE(eocdOffset + 16);
 
-  const results: Array<{ path: string; content: string }> = [];
+  const results: ZipBinaryEntry[] = [];
   let ptr = centralDirOffset;
 
   for (let idx = 0; idx < totalEntries && ptr + 46 <= zipBuffer.length; idx++) {
@@ -165,9 +168,18 @@ export function extractZipTextEntries(
 
     results.push({
       path: filePath,
-      content: outBuf.toString('utf-8'),
+      data: outBuf,
     });
   }
 
   return results;
+}
+
+export function extractZipTextEntries(
+  zipBuffer: Buffer
+): Array<{ path: string; content: string }> {
+  return extractZipBinaryEntries(zipBuffer).map((entry) => ({
+    path: entry.path,
+    content: entry.data.toString('utf-8'),
+  }));
 }

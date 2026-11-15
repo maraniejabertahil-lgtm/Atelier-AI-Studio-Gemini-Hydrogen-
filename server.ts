@@ -1,6 +1,9 @@
-import { existsSync } from 'node:fs';
+import { execFile } from 'node:child_process';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { resolve } from 'node:path';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
+import { promisify } from 'node:util';
 import express, { type Request, type Response } from 'express';
 import { WebSocketServer } from 'ws';
 import {
@@ -18,7 +21,14 @@ import {
 } from '@google/genai';
 import { loadStudioState, saveStudioState } from './server/store.ts';
 import { getTwentyOneSkillPack } from './server/skillPack.ts';
-import { buildZipBuffer, extractZipTextEntries, type ZipEntry } from './server/zip.ts';
+import {
+  buildZipBuffer,
+  extractZipBinaryEntries,
+  extractZipTextEntries,
+  type ZipEntry,
+} from './server/zip.ts';
+
+const execFileAsync = promisify(execFile);
 import {
   buildFunctionDeclaration,
   executeConnector,
@@ -85,7 +95,14 @@ function buildUserParts(prompt: string, attachments?: ChatAttachment[]): Part[] 
   const parts: Part[] = [];
   if (attachments && attachments.length > 0) {
     for (const att of attachments) {
-      if (att.isText) {
+      if (att.mimeType === 'video/youtube') {
+        parts.push({
+          fileData: {
+            fileUri: att.data,
+            mimeType: 'video/mp4',
+          },
+        });
+      } else if (att.isText) {
         parts.push({
           text: `\n[Attached file: ${att.name}]\n\`\`\`\n${att.data}\n\`\`\`\n`,
         });
@@ -492,6 +509,275 @@ async function startServer() {
     res.send(zipBuffer);
   });
 
+  // Visionary Module: extract image frames from an uploaded .zip archive
+  app.post('/api/studio/visionary/extract-zip', (req: Request, res: Response) => {
+    const { zipBase64, maxFrames = 16 } = req.body as {
+      zipBase64?: string;
+      maxFrames?: number;
+    };
+    if (!zipBase64) {
+      res.status(400).json({ error: 'Missing zipBase64 payload.' });
+      return;
+    }
+    try {
+      const buf = Buffer.from(zipBase64, 'base64');
+      const imageEntries = extractZipBinaryEntries(buf)
+        .filter((e) => /\.(png|jpe?g|webp|gif)$/i.test(e.path) && e.data.length > 0)
+        .sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true }));
+
+      if (imageEntries.length === 0) {
+        res.status(400).json({ error: 'No image frames (.jpg, .png, .webp) found in ZIP archive.' });
+        return;
+      }
+
+      const cap = Math.min(24, Math.max(1, Number(maxFrames) || 16));
+      const sampled =
+        imageEntries.length <= cap
+          ? imageEntries
+          : Array.from({ length: cap }, (_, i) => {
+              const idx = Math.min(
+                imageEntries.length - 1,
+                Math.floor((i * imageEntries.length) / cap)
+              );
+              return imageEntries[idx];
+            });
+
+      const frames: ChatAttachment[] = sampled.map((entry, idx) => {
+        const ext = entry.path.split('.').pop()?.toLowerCase() || 'jpeg';
+        const mimeType =
+          ext === 'png'
+            ? 'image/png'
+            : ext === 'webp'
+              ? 'image/webp'
+              : ext === 'gif'
+                ? 'image/gif'
+                : 'image/jpeg';
+        return {
+          id: `zip-frame-${Date.now()}-${idx}`,
+          name: entry.path.split('/').pop() || `frame_${idx + 1}.jpg`,
+          mimeType,
+          data: entry.data.toString('base64'),
+          isText: false,
+          size: entry.data.length,
+        };
+      });
+
+      res.json({
+        ok: true,
+        totalFound: imageEntries.length,
+        frames,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error: err instanceof Error ? err.message : 'Failed to extract ZIP frames.',
+      });
+    }
+  });
+
+  // Visionary Module: extract frames via server ffmpeg from video upload or direct video URL
+  app.post('/api/studio/visionary/extract-video', async (req: Request, res: Response) => {
+    const {
+      videoBase64,
+      videoUrl,
+      filename = 'input.mp4',
+      fps = 1,
+      maxFrames = 12,
+    } = req.body as {
+      videoBase64?: string;
+      videoUrl?: string;
+      filename?: string;
+      fps?: number;
+      maxFrames?: number;
+    };
+
+    if (!videoBase64 && !videoUrl) {
+      res.status(400).json({ error: 'Provide either videoBase64 or videoUrl.' });
+      return;
+    }
+
+    const workDir = mkdtempSync(join(tmpdir(), 'atelier-visionary-'));
+    try {
+      const safeExt = filename.match(/\.(mp4|mov|webm|mkv|avi)$/i)?.[0] || '.mp4';
+      const inputPath = join(workDir, `input${safeExt}`);
+
+      if (videoBase64) {
+        writeFileSync(inputPath, Buffer.from(videoBase64, 'base64'));
+      } else if (videoUrl) {
+        const parsedUrl = new URL(videoUrl);
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+          res.status(400).json({ error: 'Only http/https video URLs are supported.' });
+          return;
+        }
+        const dlResp = await fetch(videoUrl, { signal: AbortSignal.timeout(25000) });
+        if (!dlResp.ok) {
+          res.status(400).json({
+            error: `Could not fetch video URL (HTTP ${dlResp.status}). Try downloading or screen-recording it on your device and uploading the video file directly.`,
+          });
+          return;
+        }
+        const ct = dlResp.headers.get('content-type') || '';
+        if (ct.includes('text/html')) {
+          res.status(400).json({
+            error:
+              'That link points to a web page instead of a direct video file (.mp4/.webm). For YouTube links, use the YouTube Video mode or screen-record the section on your iPad and drop it into Video File.',
+          });
+          return;
+        }
+        const arrBuf = await dlResp.arrayBuffer();
+        if (arrBuf.byteLength > 80 * 1024 * 1024) {
+          res.status(400).json({ error: 'Video URL exceeds 80 MB limit.' });
+          return;
+        }
+        writeFileSync(inputPath, Buffer.from(arrBuf));
+      }
+
+      const safeFps = Math.min(4, Math.max(0.25, Number(fps) || 1));
+      const safeMax = Math.min(24, Math.max(1, Number(maxFrames) || 12));
+
+      await execFileAsync(
+        'ffmpeg',
+        [
+          '-y',
+          '-i',
+          inputPath,
+          '-vf',
+          `fps=${safeFps},scale='min(960,iw)':-2`,
+          '-frames:v',
+          String(safeMax),
+          '-q:v',
+          '4',
+          join(workDir, 'frame_%04d.jpg'),
+        ],
+        { timeout: 30000 }
+      );
+
+      const files = readdirSync(workDir)
+        .filter((f) => /^frame_\d+\.jpg$/i.test(f))
+        .sort();
+
+      if (files.length === 0) {
+        res.status(400).json({ error: 'No frames could be extracted from this video.' });
+        return;
+      }
+
+      const frames: ChatAttachment[] = files.map((f, idx) => {
+        const buf = readFileSync(join(workDir, f));
+        return {
+          id: `ffmpeg-frame-${Date.now()}-${idx}`,
+          name: f,
+          mimeType: 'image/jpeg',
+          data: buf.toString('base64'),
+          isText: false,
+          size: buf.length,
+        };
+      });
+
+      res.json({
+        ok: true,
+        frames,
+        durationSec: frames.length / safeFps,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error: err instanceof Error ? err.message : 'ffmpeg frame extraction failed.',
+      });
+    } finally {
+      try {
+        rmSync(workDir, { recursive: true, force: true });
+      } catch {
+        // ignore cleanup error
+      }
+    }
+  });
+
+  // Visionary Module: fetch YouTube oEmbed metadata & high-res thumbnail for Gemini multimodal analysis
+  app.post('/api/studio/visionary/youtube-info', async (req: Request, res: Response) => {
+    const { url } = req.body as { url?: string };
+    if (!url) {
+      res.status(400).json({ error: 'Missing YouTube URL.' });
+      return;
+    }
+
+    const ytMatch = url.match(
+      /(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/
+    );
+    if (!ytMatch?.[1]) {
+      res.status(400).json({ error: 'Could not recognize a valid YouTube video URL.' });
+      return;
+    }
+
+    const videoId = ytMatch[1];
+    const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
+
+    try {
+      let title = `YouTube Video (${videoId})`;
+      let authorName = '';
+      let thumbUrl = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+
+      const oembedResp = await fetch(
+        `https://www.youtube.com/oembed?url=${encodeURIComponent(canonicalUrl)}&format=json`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+      if (oembedResp.ok) {
+        const meta = (await oembedResp.json()) as {
+          title?: string;
+          author_name?: string;
+          thumbnail_url?: string;
+        };
+        if (meta.title) title = meta.title;
+        if (meta.author_name) authorName = meta.author_name;
+        if (meta.thumbnail_url) thumbUrl = meta.thumbnail_url;
+      }
+
+      let thumbnailAttachment: ChatAttachment | null = null;
+      const thumbResp = await fetch(thumbUrl, { signal: AbortSignal.timeout(8000) });
+      if (thumbResp.ok) {
+        const buf = Buffer.from(await thumbResp.arrayBuffer());
+        thumbnailAttachment = {
+          id: `yt-thumb-${Date.now()}`,
+          name: `youtube_${videoId}_cover.jpg`,
+          mimeType: 'image/jpeg',
+          data: buf.toString('base64'),
+          isText: false,
+          size: buf.length,
+        };
+      }
+
+      res.json({
+        ok: true,
+        videoId,
+        canonicalUrl,
+        title,
+        authorName,
+        thumbnailAttachment,
+      });
+    } catch (err) {
+      res.status(400).json({
+        error: err instanceof Error ? err.message : 'Failed to inspect YouTube video.',
+      });
+    }
+  });
+
+  // Visionary Module: bundle extracted frame images into a downloadable frames.zip
+  app.post('/api/studio/visionary/pack-zip', (req: Request, res: Response) => {
+    const { frames } = req.body as {
+      frames?: Array<{ name: string; data: string }>;
+    };
+    if (!Array.isArray(frames) || frames.length === 0) {
+      res.status(400).json({ error: 'No frames provided.' });
+      return;
+    }
+    const entries: ZipEntry[] = frames.map((f, i) => ({
+      path: `frames/${(f.name || `frame_${i + 1}.jpg`).replace(/[^a-zA-Z0-9._-]/g, '_')}`,
+      content: Buffer.from(f.data, 'base64'),
+    }));
+    const zipBuffer = buildZipBuffer(entries);
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', 'attachment; filename="visionary-frames.zip"');
+    res.setHeader('Content-Length', String(zipBuffer.length));
+    res.send(zipBuffer);
+  });
+
   // Test custom tool directly
   app.post('/api/studio/tools/test', async (req: Request, res: Response) => {
     const { tool, args } = req.body as { tool: CustomTool; args: Record<string, unknown> };
@@ -855,6 +1141,26 @@ async function startServer() {
             config: makeConfig(activeModel),
           });
         } catch (firstErr) {
+          const rawFirst = firstErr instanceof Error ? firstErr.message : String(firstErr);
+          // If YouTube fileUri was rejected by the Gemini endpoint, strip video fileData and retry with attached thumbnail/URL context
+          const hasFileData = contents.some((c) => c.parts?.some((p) => Boolean(p.fileData)));
+          if (hasFileData && /400|INVALID_ARGUMENT|fileData|fileUri|unsupported|video/i.test(rawFirst)) {
+            for (const c of contents) {
+              if (c.parts) {
+                c.parts = c.parts.map((p) =>
+                  p.fileData
+                    ? { text: `[YouTube URL reference: ${p.fileData.fileUri}]` }
+                    : p
+                );
+              }
+            }
+            return await ai.models.generateContentStream({
+              model: activeModel,
+              contents,
+              config: makeConfig(activeModel),
+            });
+          }
+
           const check = isQuotaOrTransientError(firstErr);
           if (!check.retryable) throw firstErr;
 
