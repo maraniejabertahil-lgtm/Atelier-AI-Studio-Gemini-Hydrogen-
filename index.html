@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Atelier AI Studio — Personal Prompt, Skills.md &amp; Tools Workbench</title>
+    <meta
+      name="description"
+      content="Personal AI Studio workbench for building and running prompts with modular Skills.md instructions, custom Function Tools, native and bundled Plugins, and live HTTP Connectors."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Atelier AI Studio — Personal Prompt, Skills.md &amp; Tools Workbench" />
+    <meta
+      property="og:description"
+      content="Personal AI Studio workbench for building and running prompts with modular Skills.md instructions, custom Function Tools, native and bundled Plugins, and live HTTP Connectors."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      (function () {
+        try {
+          var saved = localStorage.getItem('atelier.theme');
+          if (saved === 'light') {
+            document.documentElement.classList.remove('dark');
+          } else {
+            document.documentElement.classList.add('dark');
+          }
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body class="bg-slate-50 text-slate-900 dark:bg-[#0D1017] dark:text-slate-100 antialiased selection:bg-blue-500/20 selection:text-blue-700 dark:selection:text-blue-300">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

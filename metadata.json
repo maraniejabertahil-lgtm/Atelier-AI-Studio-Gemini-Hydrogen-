@@ -1,0 +1,8 @@
+{
+  "name": "Atelier AI Studio",
+  "description": "Personal AI Studio workbench for building and running prompts with modular Skills.md instructions, custom Function Tools, native and bundled Plugins, and live HTTP Connectors.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
