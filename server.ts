@@ -1016,7 +1016,7 @@ async function startServer() {
       ];
       if (session.systemInstruction.trim()) {
         systemSections.push(
-          `Session-specific preferences (subordinate to Athena 5.5):\\n${session.systemInstruction.trim()}`
+          `Session-specific preferences (subordinate to Athena 5.5):\n${session.systemInstruction.trim()}`
         );
       }
       if (hasStudioMemory && state.memories.length > 0) {
