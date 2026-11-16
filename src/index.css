@@ -5,64 +5,127 @@
   :root {
     --font-sans: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --atelier-bg: #111318;
+    --atelier-panel: #191c23;
+    --atelier-raised: #222630;
+    --atelier-border: #292e38;
+    --atelier-blue: #4285f4;
+    --atelier-text: #f5f5f5;
+    --atelier-muted: #9ca3af;
   }
 
-  html {
-    font-family: var(--font-sans);
-  }
-
-  body {
-    background: #f8fafc;
-  }
-
-  .dark body {
-    background: #111318;
-    color: #f5f5f5;
-  }
-
-  ::selection {
-    background: rgba(66, 133, 244, 0.28);
-  }
-
-  code,
-  pre,
-  kbd,
-  samp,
-  .font-mono {
-    font-family: var(--font-mono);
-  }
+  html { font-family: var(--font-sans); color-scheme: light; }
+  html.dark { color-scheme: dark; background: var(--atelier-bg); }
+  body { margin: 0; background: #f8fafc; }
+  .dark body { background: var(--atelier-bg); color: var(--atelier-text); }
+  ::selection { background: rgba(66, 133, 244, .28); }
+  code, pre, kbd, samp, .font-mono { font-family: var(--font-mono); }
+  button, input, textarea, select { font: inherit; }
+  button { -webkit-tap-highlight-color: transparent; }
 }
 
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
+.tabular-nums { font-variant-numeric: tabular-nums; }
 
-/* Custom subtle scrollbars for studio panes */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+/* Athena-inspired application surfaces. These overrides intentionally affect
+   presentation only; application state, model configuration and API behavior
+   remain owned by the existing React components. */
+.dark .bg-white,
+.dark .bg-white\/95,
+.dark .bg-white\/90 { background-color: var(--atelier-panel) !important; }
+.dark .bg-slate-50,
+.dark .bg-slate-50\/70,
+.dark .bg-slate-100,
+.dark .bg-gray-50 { background-color: #161a21 !important; }
+.dark .bg-\[\#0D1017\],
+.dark .bg-\[\#11151E\] { background-color: var(--atelier-panel) !important; }
+.dark .bg-slate-900,
+.dark .bg-slate-950 { background-color: #101319 !important; }
 
-::-webkit-scrollbar-track {
-  background: transparent;
-}
+.dark [class*="border-slate-"],
+.dark [class*="border-gray-"],
+.dark [class*="divide-slate-"] { border-color: var(--atelier-border) !important; }
+.dark [class*="text-slate-900"],
+.dark [class*="text-gray-900"] { color: #f3f4f6 !important; }
+.dark [class*="text-slate-800"],
+.dark [class*="text-slate-700"],
+.dark [class*="text-gray-800"],
+.dark [class*="text-gray-700"] { color: #e5e7eb !important; }
+.dark [class*="text-slate-600"],
+.dark [class*="text-slate-500"],
+.dark [class*="text-gray-600"],
+.dark [class*="text-gray-500"] { color: var(--atelier-muted) !important; }
 
-::-webkit-scrollbar-thumb {
-  background: rgba(156, 163, 175, 0.28);
-  border-radius: 9999px;
+/* Panels feel like a consistent studio surface rather than disconnected cards. */
+.dark .rounded-xl.border,
+.dark .rounded-2xl.border {
+  border-color: var(--atelier-border);
+  box-shadow: 0 1px 0 rgba(255,255,255,.015), 0 12px 32px rgba(0,0,0,.12);
 }
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(156, 163, 175, 0.5);
+.dark .rounded-xl.border.bg-white,
+.dark .rounded-xl.border.dark\:bg-\[\#11151E\] {
+  background: var(--atelier-panel) !important;
 }
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark textarea,
+.dark select {
+  border-color: #343b48 !important;
+  background-color: #141820 !important;
+  color: #f3f4f6 !important;
+  border-radius: 9px;
+}
+.dark input::placeholder,
+.dark textarea::placeholder { color: #687282 !important; }
+.dark input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  outline: none;
+  border-color: rgba(66,133,244,.75) !important;
+  box-shadow: 0 0 0 3px rgba(66,133,244,.12);
+}
+.dark button { transition: background-color .16s ease, border-color .16s ease, color .16s ease, transform .16s ease; }
+.dark button:focus-visible {
+  outline: 2px solid rgba(66,133,244,.9);
+  outline-offset: 2px;
+}
+.dark button:active:not(:disabled) { transform: translateY(1px); }
+.dark button:disabled { cursor: not-allowed; }
 
+/* Keep blue actions crisp and consistent across every workspace. */
+.dark .bg-blue-600 { background-color: var(--atelier-blue) !important; }
+.dark .hover\:bg-blue-700:hover { background-color: #3478e5 !important; }
+.dark [class*="ring-blue-"] { --tw-ring-color: rgba(66,133,244,.55); }
+.dark .text-blue-600,
+.dark .text-blue-500 { color: #6da3ff !important; }
+
+/* Shared application frame and content rhythm. */
+#root { min-height: 100vh; }
+.dark main,
+.dark [role="main"] { min-width: 0; }
+.dark .overflow-y-auto { scrollbar-gutter: stable; }
+.dark pre {
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 10px;
+  line-height: 1.65;
+}
+.dark hr { border-color: var(--atelier-border); }
+
+/* Refined scrollbars */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(156,163,175,.25); border: 2px solid transparent; background-clip: padding-box; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(156,163,175,.45); border: 2px solid transparent; background-clip: padding-box; }
+
+@media (max-width: 760px) {
+  .atelier-topbar { height: auto !important; min-height: 60px; padding: 10px 14px !important; gap: 12px !important; flex-wrap: wrap; }
+  .atelier-topbar nav { order: 3; width: 100%; justify-content: flex-start; gap: 5px !important; }
+  .atelier-topbar .atelier-brand { font-size: 14px; }
+  .atelier-topbar .atelier-nav-button { padding: 8px 10px !important; }
+}
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
     animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
+    transition-duration: .01ms !important;
     scroll-behavior: auto !important;
   }
 }
