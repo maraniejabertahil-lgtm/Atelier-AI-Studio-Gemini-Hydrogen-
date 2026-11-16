@@ -320,6 +320,25 @@ async function startServer() {
     res.json({ ok: true });
   });
 
+  // Restricted project terminal: fixed commands only; no shell interpolation or arbitrary execution.
+  app.post('/api/studio/terminal', async (req: Request, res: Response) => {
+    const command = typeof req.body?.command === 'string' ? req.body.command.trim() : '';
+    const commands: Record<string, [string, string[]]> = {
+      'pwd': ['pwd', []], 'ls': ['ls', ['-la']],
+      'git status': ['git', ['status', '--short']], 'git log': ['git', ['log', '-5', '--oneline']],
+      'npm run build': ['npm', ['run', 'build']], 'npm run lint': ['npm', ['run', 'lint']],
+    };
+    const selected = commands[command];
+    if (!selected) { res.status(400).json({ error: 'Command not allowed. Available: pwd, ls, git status, git log, npm run build, npm run lint.' }); return; }
+    try {
+      const { stdout, stderr } = await execFileAsync(selected[0], selected[1], { cwd: process.cwd(), timeout: 30000, maxBuffer: 1024 * 1024 });
+      res.json({ output: [stdout, stderr].filter(Boolean).join('\n') || 'Command completed successfully.' });
+    } catch (error) {
+      const detail = error as Error & { stdout?: string; stderr?: string };
+      res.status(200).json({ output: [detail.stdout, detail.stderr, detail.message].filter(Boolean).join('\n') });
+    }
+  });
+
   // Get full studio state
   app.get('/api/studio/state', (_req: Request, res: Response) => {
     const state = loadStudioState();
