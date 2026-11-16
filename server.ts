@@ -1,4 +1,5 @@
 import { execFile } from 'node:child_process';
+import { timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { tmpdir } from 'node:os';
@@ -318,6 +319,51 @@ async function startServer() {
   // Health check
   app.get('/api/health', (_req: Request, res: Response) => {
     res.json({ ok: true });
+  });
+
+  // Personal project terminal. Configure STUDIO_TERMINAL_TOKEN (32+ random characters)
+  // in the hosting environment before enabling shell access.
+  app.post('/api/studio/terminal', async (req: Request, res: Response) => {
+    const configuredToken = process.env.STUDIO_TERMINAL_TOKEN || '';
+    if (configuredToken.length < 32) {
+      res.status(503).json({ error: 'Terminal is disabled. Set STUDIO_TERMINAL_TOKEN (at least 32 characters) in the server environment.' });
+      return;
+    }
+
+    const authorization = req.header('authorization') || '';
+    const suppliedToken = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+    const expected = Buffer.from(configuredToken);
+    const supplied = Buffer.from(suppliedToken);
+    if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) {
+      res.status(401).json({ error: 'Terminal access denied. Enter the terminal access token configured by the site owner.' });
+      return;
+    }
+
+    const command = typeof req.body?.command === 'string' ? req.body.command.trim() : '';
+    if (!command) {
+      res.status(400).json({ error: 'Enter a command to run.' });
+      return;
+    }
+    if (command.length > 4000) {
+      res.status(413).json({ error: 'Command is too long (maximum 4,000 characters).' });
+      return;
+    }
+
+    try {
+      const { stdout, stderr } = await execFileAsync('bash', ['-lc', command], {
+        cwd: process.cwd(),
+        timeout: 120000,
+        maxBuffer: 4 * 1024 * 1024,
+        env: process.env,
+      });
+      res.json({ output: [stdout, stderr].filter(Boolean).join('\n') || 'Command completed successfully.' });
+    } catch (error) {
+      const detail = error as Error & { stdout?: string; stderr?: string; code?: number | string };
+      res.status(200).json({
+        output: [detail.stdout, detail.stderr, detail.message].filter(Boolean).join('\n'),
+        exitCode: typeof detail.code === 'number' ? detail.code : null,
+      });
+    }
   });
 
   // Get full studio state

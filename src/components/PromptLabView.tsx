@@ -25,6 +25,12 @@ import {
   Volume2,
   Wrench,
   X,
+  Code2,
+  Eye,
+  Terminal,
+  Plug,
+  Cable,
+  Monitor,
 } from 'lucide-react';
 import type {
   ChatAttachment,
@@ -210,6 +216,11 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
   const [streamError, setStreamError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showInsertMenu, setShowInsertMenu] = useState(false);
+  const [workspaceTab, setWorkspaceTab] = useState<'preview' | 'code'>('preview');
+  const [composerMode, setComposerMode] = useState<'chat' | 'terminal'>('chat');
+  const [terminalOutput, setTerminalOutput] = useState('');
+  const [terminalBusy, setTerminalBusy] = useState(false);
+  const [terminalToken, setTerminalToken] = useState('');
   const [liveVoiceOpen, setLiveVoiceOpen] = useState(false);
   const [visionaryOpen, setVisionaryOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
@@ -848,11 +859,37 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
     .some((p) => p.kind === 'skill_router');
 
   const activeLocalSpec = getLocalModelSpec(activeSession.model);
+  const latestModelText = [...activeSession.messages].reverse().find((m) => m.role === 'model')?.text || '';
+  const generatedCodeBlocks = Array.from(latestModelText.matchAll(/```([a-zA-Z0-9_+#.-]*)\s*\n([\s\S]*?)```/g)).map((match, index) => ({ language: (match[1] || 'text').toLowerCase(), code: match[2].trim(), index }));
+  const previewHtml = generatedCodeBlocks.find((block) => block.language === 'html' || block.language === 'htm')?.code || '';
+  const runTerminalCommand = async () => {
+    const command = promptText.trim();
+    if (!command || terminalBusy) return;
+    if (!terminalToken.trim()) {
+      setTerminalOutput((current) => current + 'Enter your terminal access token first.\n');
+      return;
+    }
+    setTerminalBusy(true);
+    setTerminalOutput((current) => current + (current ? '\n' : '') + '$ ' + command + '\n');
+    setPromptText('');
+    try {
+      const response = await fetch('/api/studio/terminal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + terminalToken.trim() },
+        body: JSON.stringify({ command }),
+      });
+      const data = await response.json() as { output?: string; error?: string };
+      if (response.status === 401) setTerminalToken('');
+      setTerminalOutput((current) => current + (data.output || data.error || 'Command completed.') + '\n');
+    } catch (error) {
+      setTerminalOutput((current) => current + (error instanceof Error ? error.message : 'Terminal request failed.') + '\n');
+    } finally { setTerminalBusy(false); }
+  };
 
   return (
-    <div className="atelier-view-shell atelier-prompt-lab flex-1 min-h-0 flex bg-slate-50 dark:bg-[#0D1017]">
+    <div className="atelier-view-shell atelier-prompt-lab atelier-split-workspace flex-1 min-h-0 flex bg-slate-50 dark:bg-[#0D1017]">
       {/* LEFT RAIL: Prompt History & Quick Extension Summary */}
-      <aside className="hidden lg:flex w-64 shrink-0 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E] flex-col">
+      <aside className="atelier-history-rail hidden lg:flex w-64 shrink-0 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E] flex-col">
         <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 space-y-2.5">
           <button
             type="button"
@@ -957,7 +994,13 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
       </aside>
 
       {/* CENTER WORKBENCH: System Instructions + Prompt Stream + Composer */}
-      <main className="flex-1 min-w-0 flex flex-col">
+      <main className="atelier-chat-pane flex-1 min-w-0 flex flex-col">
+        <div className="atelier-chat-heading px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
+          <div className="min-w-0"><div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Chatting with AI</div><div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{activeSession.title}</div></div>
+          <select aria-label="Conversation history" value={activeSession.id} onChange={(e) => onSelectSession(e.target.value)} className="atelier-session-select max-w-[44%] min-w-0 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#141820] text-[11px]">
+            {state.sessions.map((session) => <option key={session.id} value={session.id}>{session.title}</option>)}
+          </select>
+        </div>
         {/* System Instructions & Skills.md Drawer */}
         <div className="border-b border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E]">
           <div className="px-4 sm:px-5 py-2.5 flex flex-wrap items-center justify-between gap-2.5">
@@ -1356,6 +1399,7 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
           </div>
         </div>
 
+        {composerMode === 'terminal' && <div className="atelier-terminal-output mx-3 mb-2 rounded-lg border border-slate-700 bg-[#0b1018] p-3 text-[11px] font-mono text-emerald-300 whitespace-pre-wrap max-h-48 overflow-y-auto"><div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400"><span>Authenticated project shell · bash · project-root working directory</span><button type="button" onClick={() => setTerminalOutput('')} className="text-slate-300 hover:text-white">Clear output</button></div>{terminalOutput || 'Full shell commands are enabled after terminal authentication. Each command starts in the project root; use cd path && command to work in a subfolder.'}</div>}
         {/* Bottom Prompt Composer */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E]">
           <div className="max-w-3xl mx-auto space-y-2.5">
@@ -1417,22 +1461,34 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
                       {t.name}
                     </button>
                   ))}
-                  {state.connectors.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        setPromptText((p) => `${p}${p ? ' ' : ''}Call ${c.toolName} to `);
-                        setShowInsertMenu(false);
-                      }}
-                      className="w-full text-left px-2.5 py-1.5 rounded-md text-xs font-mono text-blue-600 dark:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-                    >
-                      {c.toolName}
-                    </button>
-                  ))}
+                  {state.connectors.map((c) => <button key={c.id} type="button" onClick={() => toggleIdInSession('activeConnectorIds', c.id)} className="w-full flex items-center justify-between text-left px-2.5 py-1.5 rounded-md text-xs text-blue-600 dark:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"><span><Cable className="inline w-3 h-3 mr-1.5"/>{c.name}</span><span>{activeSession.activeConnectorIds.includes(c.id) ? '✓ Mounted' : '＋ Mount'}</span></button>)}
+                  <div className="px-2 pt-2 pb-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700">Plugins</div>
+                  {state.plugins.map((plugin) => <button key={plugin.id} type="button" onClick={() => toggleIdInSession('activePluginIds', plugin.id)} className="w-full flex items-center justify-between text-left px-2.5 py-1.5 rounded-md text-xs text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"><span><Plug className="inline w-3 h-3 mr-1.5"/>{plugin.name}</span><span>{activeSession.activePluginIds.includes(plugin.id) ? '✓ Mounted' : '＋ Mount'}</span></button>)}
                 </div>
               )}
 
+              <div className="flex items-center justify-between px-3 pt-2">
+                <div className="inline-flex items-center rounded-lg bg-slate-200/70 dark:bg-slate-800 p-0.5">
+                  <button type="button" onClick={() => setComposerMode('chat')} className={composerMode === 'chat' ? 'px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-[#252c38] text-slate-900 dark:text-white shadow-sm' : 'px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-500'}>Chat</button>
+                  <button type="button" onClick={() => setComposerMode('terminal')} className={composerMode === 'terminal' ? 'px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-[#252c38] text-emerald-600 dark:text-emerald-300 shadow-sm' : 'px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-500'}><Terminal className="inline w-3 h-3 mr-1"/>Terminal</button>
+                </div>
+                <span className="text-[10px] text-slate-500">{composerMode === 'terminal' ? 'Private project shell' : 'AI assistant'}</span>
+              </div>
+              {composerMode === 'terminal' && (
+                <div className="px-3 pt-2">
+                  <input
+                    type="password"
+                    value={terminalToken}
+                    onChange={(e) => setTerminalToken(e.target.value)}
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="Terminal access token (STUDIO_TERMINAL_TOKEN)"
+                    aria-label="Terminal access token"
+                    className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#0b1018] px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="mt-1 text-[10px] text-slate-500">Set this secret in your hosting environment. Commands run on the server with your app's permissions.</p>
+                </div>
+              )}
               <textarea
                 rows={3}
                 value={promptText}
@@ -1440,10 +1496,11 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && (e.ctrlKey || e.metaKey || !e.shiftKey)) {
                     e.preventDefault();
-                    runPrompt(undefined, editingMessageId || undefined);
+                    if (composerMode === 'terminal') runTerminalCommand();
+                    else runPrompt(undefined, editingMessageId || undefined);
                   }
                 }}
-                placeholder="Message your assistant... (Enter to send, Shift+Enter for new line)"
+                placeholder={composerMode === 'terminal' ? 'Enter a project command… (e.g. npm run build)' : 'Message your assistant... (Enter to send, Shift+Enter for new line)'}
                 className="w-full px-4 pt-3 pb-2 bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none resize-none"
               />
 
@@ -1467,13 +1524,9 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
                     <Film className="w-3.5 h-3.5" />
                     <span>Visionary</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowInsertMenu((v) => !v)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 cursor-pointer"
-                  >
-                    <Wrench className="w-3.5 h-3.5" />
-                    <span>Mention tool</span>
+                  <button type="button" onClick={() => setShowInsertMenu((v) => !v)} title="Mount plugins and connectors" className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 cursor-pointer">
+                    <Plug className="w-3.5 h-3.5"/><span>Plugins &amp; Connectors</span>
+                    <span className="text-[10px] opacity-70">{activeSession.activePluginIds.length + activeSession.activeConnectorIds.length}</span>
                   </button>
                   <button
                     type="button"
@@ -1517,14 +1570,8 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
                     <span>Stop</span>
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => runPrompt(undefined, editingMessageId || undefined)}
-                    disabled={!promptText.trim() && attachments.length === 0}
-                    className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white transition-colors cursor-pointer"
-                  >
-                    <Play className="w-3.5 h-3.5" />
-                    <span>Send</span>
+                  <button type="button" onClick={() => composerMode === 'terminal' ? runTerminalCommand() : runPrompt(undefined, editingMessageId || undefined)} disabled={composerMode === 'terminal' ? (!promptText.trim() || terminalBusy) : (!promptText.trim() && attachments.length === 0)} className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white transition-colors cursor-pointer">
+                    {composerMode === 'terminal' ? <Terminal className="w-3.5 h-3.5"/> : <Play className="w-3.5 h-3.5"/>}<span>{composerMode === 'terminal' ? (terminalBusy ? 'Running' : 'Run') : 'Send'}</span>
                   </button>
                 )}
               </div>
@@ -1533,8 +1580,22 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
         </div>
       </main>
 
-      {/* RIGHT INSPECTOR: Run Settings & Live Capability Mounts */}
-      <aside className="hidden xl:flex w-80 shrink-0 border-l border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E] flex-col overflow-y-auto">
+
+      <section className="atelier-preview-pane min-w-0 flex flex-col border-l border-slate-200 dark:border-slate-800 bg-[#111318]">
+        <div className="atelier-preview-toolbar h-14 shrink-0 px-5 flex items-center justify-between border-b border-[#292e38] bg-[#191c23]">
+          <div className="flex items-center gap-2"><Monitor className="w-4 h-4 text-[#9ca3af]"/><div><div className="text-xs font-semibold text-[#f5f5f5]">Workspace</div><div className="text-[10px] text-[#9ca3af]">Generated project · Live output</div></div></div>
+          <div className="flex items-center gap-1 rounded-lg border border-[#303642] bg-[#11151b] p-1">
+            <button type="button" onClick={() => setWorkspaceTab('preview')} className={workspaceTab === 'preview' ? 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[#2b3442] text-white' : 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-[#9ca3af]'}><Eye className="w-3.5 h-3.5"/>Preview</button>
+            <button type="button" onClick={() => setWorkspaceTab('code')} className={workspaceTab === 'code' ? 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold bg-[#2b3442] text-white' : 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold text-[#9ca3af]'}><Code2 className="w-3.5 h-3.5"/>Code <span className="text-[10px] opacity-70">{generatedCodeBlocks.length || ''}</span></button>
+          </div>
+        </div>
+        <div className="atelier-preview-content flex-1 min-h-0 overflow-auto">
+          {workspaceTab === 'preview' ? (previewHtml ? <iframe title="Generated application preview" sandbox="allow-scripts" srcDoc={previewHtml} className="w-full h-full min-h-[520px] bg-white border-0"/> : <div className="h-full min-h-[420px] flex items-center justify-center p-8"><div className="max-w-md text-center space-y-3"><div className="mx-auto w-14 h-14 rounded-2xl bg-[#222630] border border-[#303642] flex items-center justify-center"><Monitor className="w-6 h-6 text-[#8baef5]"/></div><h2 className="text-base font-semibold text-[#f5f5f5]">Your preview will appear here</h2><p className="text-sm leading-relaxed text-[#9ca3af]">Ask the assistant to build an HTML page or app. When its reply includes an HTML code block, it will render here. Switch to Code to inspect generated source.</p>{generatedCodeBlocks.length > 0 && <button type="button" onClick={() => setWorkspaceTab('code')} className="px-3 py-2 rounded-lg bg-[#222630] text-xs text-white border border-[#303642]">View generated code</button>}</div></div>) : <div className="p-4 space-y-3">{generatedCodeBlocks.length ? generatedCodeBlocks.map((block) => <div key={block.index} className="rounded-xl overflow-hidden border border-[#292e38] bg-[#151920]"><div className="px-3 py-2 flex items-center justify-between border-b border-[#292e38] text-[11px] text-[#9ca3af]"><span>{block.language.toUpperCase()} · Block {block.index + 1}</span><button type="button" onClick={() => handleCopyText('workspace-code-' + block.index, block.code)} className="inline-flex items-center gap-1 hover:text-white"><Copy className="w-3 h-3"/>{copiedId === 'workspace-code-' + block.index ? 'Copied' : 'Copy'}</button></div><pre className="m-0 p-4 overflow-x-auto text-xs leading-relaxed text-[#d5deeb] whitespace-pre"><code>{block.code}</code></pre></div>) : <div className="p-8 text-center text-sm text-[#9ca3af]">No code blocks found yet. Ask the assistant to generate code and it will appear here.</div>}</div>}
+        </div>
+      </section>
+
+            {/* RIGHT INSPECTOR: Run Settings & Live Capability Mounts */}
+      <aside className="atelier-run-inspector hidden xl:flex w-80 shrink-0 border-l border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E] flex-col overflow-y-auto">
         <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
           <h2 className="text-xs font-semibold text-slate-900 dark:text-slate-100">
             Run Settings
