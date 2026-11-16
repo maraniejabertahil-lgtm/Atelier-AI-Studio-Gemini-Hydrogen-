@@ -1467,7 +1467,7 @@ async function startServer() {
             }
 
             if (entry.kind === 'workspace') {
-              const workspaceRes = executeAthenaWorkspaceTool(call.name, call.args);
+              const workspaceRes = executeAthenaWorkspaceTool(call.name, call.args, session.id);
               trace = {
                 id: `trace-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                 toolName: call.name,
