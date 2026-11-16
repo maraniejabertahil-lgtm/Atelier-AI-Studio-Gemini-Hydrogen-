@@ -1082,6 +1082,7 @@ async function startServer() {
       }
 
       for (const tool of activeTools) {
+        if (toolLookup.has(tool.name)) continue; // Athena workspace names are reserved.
         if (!shouldIncludeToolForPrompt(tool.name, prompt, hasAttach)) continue;
         functionDeclarations.push(
           buildFunctionDeclaration(tool.name, tool.description, tool.parameters)
@@ -1090,6 +1091,7 @@ async function startServer() {
       }
 
       for (const conn of activeConnectors) {
+        if (toolLookup.has(conn.toolName)) continue; // Do not shadow built-in Athena tools.
         if (!shouldIncludeToolForPrompt(conn.toolName, prompt, hasAttach)) continue;
         functionDeclarations.push(
           buildFunctionDeclaration(conn.toolName, conn.description, conn.parameters)
@@ -1806,12 +1808,14 @@ async function startServer() {
     }
 
     for (const t of state.tools.filter((x) => toolIds.has(x.id))) {
+      if (liveLookup.has(t.name)) continue;
       const d = buildFunctionDeclaration(t.name, t.description, t.parameters);
       d.behavior = Behavior.NON_BLOCKING;
       liveDecls.push(d);
       liveLookup.set(t.name, { kind: 'custom_tool', tool: t });
     }
     for (const c of state.connectors.filter((x) => connectorIds.has(x.id))) {
+      if (liveLookup.has(c.toolName)) continue;
       const d = buildFunctionDeclaration(c.toolName, c.description, c.parameters);
       d.behavior = Behavior.NON_BLOCKING;
       liveDecls.push(d);
