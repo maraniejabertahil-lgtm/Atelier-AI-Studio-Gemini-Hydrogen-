@@ -338,6 +338,7 @@
     border-color: #3a4658;
   }
 
+  .dark .atelier-split-workspace,
   .atelier-split-workspace {
     display: flex !important;
     flex-direction: column !important;
@@ -406,4 +407,8 @@
   .atelier-topbar button {
     min-height: 38px;
   }
+}
+
+@supports (height: 100dvh) {
+  .atelier-app-shell { height: 100dvh; }
 }
