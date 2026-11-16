@@ -389,6 +389,10 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
     const spec = getLocalModelSpec(activeSession.model);
     if (!spec) return;
 
+    setFallbackNotice(
+      'Athena 5.5 full mode is unavailable on in-browser models. This offline model cannot load the full prompt or run server tools; switch to a cloud Gemini model for Athena 5.5.'
+    );
+
     if (filesToSend.some((f) => !f.isText)) {
       setStreamError(
         'In-browser models only support text/code attachments (switch to a Gemini cloud model for images).'
