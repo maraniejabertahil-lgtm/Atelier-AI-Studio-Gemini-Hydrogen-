@@ -416,9 +416,12 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
 
     // Keep system prompt + skills + recent history compact so 4 GB iPad 10 KV-cache never overflows RAM
     const customSys = activeSession.systemInstruction.trim();
-    const baseSys = customSys
-      ? customSys.slice(0, 550)
-      : 'You are a helpful plain-English assistant. Define technical terms simply and organize answers with short steps.';
+    const baseSys = [
+      'LOCAL MODEL LIMITATION: This small in-browser model does not load the full Athena 5.5 instruction file and cannot execute Athena workspace, browser, computer, shell, or external-service tools. Do not claim to have followed the full Athena 5.5 runtime or to have executed tools. For full Athena 5.5 behavior, select a cloud Gemini model.',
+      customSys
+        ? customSys.slice(0, 550)
+        : 'You are a helpful plain-English assistant. Define technical terms simply and organize answers with short steps.',
+    ].join('\n\n');
 
     const mountedIds = new Set(activeSession.activeSkillIds);
     const mountedSkills = state.skills.filter((s) => mountedIds.has(s.id));
