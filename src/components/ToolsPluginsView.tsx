@@ -286,7 +286,7 @@ export const ToolsPluginsView: React.FC<ToolsPluginsViewProps> = ({
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col bg-slate-50 dark:bg-[#0D1017]">
+    <div className="atelier-view-shell atelier-tools-view flex-1 min-h-0 flex flex-col bg-slate-50 dark:bg-[#0D1017]">
       {/* Sub-navigation strip */}
       <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-[#11151E] flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-1 p-1 rounded-lg bg-slate-100 dark:bg-slate-800/80">

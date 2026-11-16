@@ -850,7 +850,7 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
   const activeLocalSpec = getLocalModelSpec(activeSession.model);
 
   return (
-    <div className="flex-1 min-h-0 flex bg-slate-50 dark:bg-[#0D1017]">
+    <div className="atelier-view-shell atelier-prompt-lab flex-1 min-h-0 flex bg-slate-50 dark:bg-[#0D1017]">
       {/* LEFT RAIL: Prompt History & Quick Extension Summary */}
       <aside className="hidden lg:flex w-64 shrink-0 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E] flex-col">
         <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 space-y-2.5">

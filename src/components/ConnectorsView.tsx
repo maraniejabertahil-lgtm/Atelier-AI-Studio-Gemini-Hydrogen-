@@ -181,7 +181,7 @@ export const ConnectorsView: React.FC<ConnectorsViewProps> = ({
   };
 
   return (
-    <div className="flex-1 min-h-0 flex bg-slate-50 dark:bg-[#0D1017]">
+    <div className="atelier-view-shell atelier-connectors-view flex-1 min-h-0 flex bg-slate-50 dark:bg-[#0D1017]">
       {/* Left Rail */}
       <aside className="w-72 shrink-0 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E] flex flex-col">
         <div className="p-4 border-b border-slate-200 dark:border-slate-800 space-y-3">
