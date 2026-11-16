@@ -417,7 +417,7 @@ export const SkillsStudioView: React.FC<SkillsStudioViewProps> = ({
   };
 
   return (
-    <div className="flex-1 min-h-0 flex flex-col md:flex-row bg-slate-50 dark:bg-[#0D1017]">
+    <div className="atelier-view-shell atelier-skills-view flex-1 min-h-0 flex flex-col md:flex-row bg-slate-50 dark:bg-[#0D1017]">
       {/* Left Sidebar: Skills.md Library */}
       <aside className="w-full md:w-72 shrink-0 max-h-[40vh] md:max-h-none border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E] flex flex-col">
         <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 space-y-2.5">
