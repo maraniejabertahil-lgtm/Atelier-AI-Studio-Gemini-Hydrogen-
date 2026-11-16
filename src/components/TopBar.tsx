@@ -21,7 +21,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onOpenGetCode,
 }) => {
   return (
-    <header className="h-13 shrink-0 border-b border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E] px-5 flex items-center justify-between gap-8">
+    <header className="h-14 shrink-0 border-b border-slate-200 dark:border-[#292E38] bg-white dark:bg-[#191C23] px-5 flex items-center justify-between gap-8">
       {/* Zone 1: Single-line brand title */}
       <button
         type="button"
@@ -42,7 +42,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               onClick={() => onSelectView(item.id)}
               className={`relative py-3.5 text-sm font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 rounded ${
                 isActive
-                  ? 'text-blue-600 dark:text-blue-400'
+                  ? 'text-[#4285F4]'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
               }`}
             >
@@ -50,7 +50,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               {isActive && (
                 <span
                   aria-hidden="true"
-                  className="absolute inset-x-0 bottom-0 h-0.5 bg-blue-600 dark:bg-blue-400"
+                  className="absolute inset-x-0 bottom-0 h-0.5 bg-[#4285F4]"
                 />
               )}
             </button>
@@ -63,7 +63,7 @@ export const TopBar: React.FC<TopBarProps> = ({
         <button
           type="button"
           onClick={onOpenGetCode}
-          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#11151E]"
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#4285F4] hover:bg-[#3478E5] text-white transition-colors whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#191C23]"
         >
           <Code2 className="w-3.5 h-3.5" />
           <span>Get Code</span>
