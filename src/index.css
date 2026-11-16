@@ -252,3 +252,22 @@
   .dark .atelier-connectors-view > aside { width: 100%; max-width: none; max-height: 38vh; }
   .dark .atelier-view-shell { overflow-y: auto; }
 }
+
+/* 30/70 AI chat and generated-workspace layout. */
+.dark .atelier-split-workspace { display: grid !important; grid-template-columns: minmax(320px, 30%) minmax(0, 70%); gap: 0; background: #111318 !important; }
+.dark .atelier-history-rail, .dark .atelier-run-inspector { display: none !important; }
+.dark .atelier-chat-pane { width: 100%; min-width: 0; max-width: none; border-right: 1px solid #292e38; background: #191c23; }
+.dark .atelier-chat-heading { background: #191c23; border-color: #292e38; }
+.dark .atelier-chat-pane .max-w-3xl { max-width: 100%; }
+.dark .atelier-chat-pane > div:nth-child(3) { background: #151920; }
+.dark .atelier-chat-pane > div:nth-child(4) { background: #191c23; border-color: #292e38; }
+.dark .atelier-preview-pane { width: 100%; height: 100%; min-height: 0; }
+.dark .atelier-preview-content { background: #111318; }
+.dark .atelier-preview-content pre { background: #11151b; }
+.dark .atelier-session-select { background-color: #141820; color: #dce3ed; border-color: #303642; }
+@media (max-width: 900px) { .dark .atelier-split-workspace { grid-template-columns: minmax(280px, 38%) minmax(0, 62%); } }
+@media (max-width: 640px) {
+  .dark .atelier-split-workspace { display: flex !important; flex-direction: column; overflow-y: auto; }
+  .dark .atelier-chat-pane { min-height: 62vh; border-right: 0; border-bottom: 1px solid #292e38; }
+  .dark .atelier-preview-pane { min-height: 55vh; }
+}
