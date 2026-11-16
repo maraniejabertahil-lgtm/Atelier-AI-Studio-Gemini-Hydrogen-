@@ -1001,7 +1001,7 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
       </aside>
 
       {/* CENTER WORKBENCH: System Instructions + Prompt Stream + Composer */}
-      <main className="atelier-chat-pane flex-1 min-w-0 flex flex-col">
+      <main className="atelier-chat-pane flex-1 min-w-0 min-h-0 flex flex-col overflow-hidden">
         <div className="atelier-chat-heading px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
           <div className="min-w-0"><div className="text-sm font-semibold text-slate-900 dark:text-slate-100">Chatting with AI</div><div className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{activeSession.title}</div></div>
           <select aria-label="Conversation history" value={activeSession.id} onChange={(e) => onSelectSession(e.target.value)} className="atelier-session-select max-w-[44%] min-w-0 px-2 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-[#141820] text-[11px]">
@@ -1161,7 +1161,7 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
         </div>
 
         {/* Prompt / Response Stream */}
-        <div className="flex-1 overflow-y-auto px-5 py-6">
+        <div className="atelier-chat-scroll flex-1 min-h-0 overflow-y-auto overscroll-contain px-5 py-6">
           <div className="max-w-3xl mx-auto space-y-6">
             {activeSession.messages.length === 0 && !isStreaming ? (
               <div className="py-10 space-y-8">
