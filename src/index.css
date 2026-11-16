@@ -129,3 +129,126 @@
     scroll-behavior: auto !important;
   }
 }
+
+
+/* Full workspace composition */
+.dark .atelier-app-shell {
+  background: var(--atelier-bg);
+  color: var(--atelier-text);
+  background-image: radial-gradient(ellipse at 50% -25%, rgba(66,133,244,.075), transparent 58%);
+}
+.dark .atelier-view-shell {
+  background: var(--atelier-bg) !important;
+  isolation: isolate;
+}
+.dark .atelier-view-shell > aside {
+  background: #151920 !important;
+  border-color: var(--atelier-border) !important;
+  box-shadow: 8px 0 28px rgba(0,0,0,.08);
+}
+.dark .atelier-view-shell > main {
+  background: transparent;
+}
+.dark .atelier-view-shell > aside > div:first-child,
+.dark .atelier-view-shell > aside > div:last-child {
+  border-color: var(--atelier-border) !important;
+}
+.dark .atelier-view-shell h1,
+.dark .atelier-view-shell h2 {
+  letter-spacing: -.025em;
+}
+.dark .atelier-view-shell h1 { font-size: 15px; }
+.dark .atelier-view-shell h2 { font-size: 13px; }
+.dark .atelier-view-shell .rounded-xl,
+.dark .atelier-view-shell .rounded-2xl {
+  border-radius: 12px;
+}
+.dark .atelier-view-shell button:not(.atelier-nav-button) {
+  letter-spacing: -.005em;
+}
+.dark .atelier-view-shell button[class*="bg-blue-"],
+.dark .atelier-view-shell button[class*="bg-\\[#4285F4\\]"] {
+  box-shadow: 0 5px 16px rgba(66,133,244,.16);
+}
+.dark .atelier-prompt-lab > aside {
+  width: 272px;
+  background: #151920 !important;
+}
+.dark .atelier-prompt-lab > main > div:first-child {
+  background: rgba(25,28,35,.96) !important;
+  border-color: var(--atelier-border) !important;
+  backdrop-filter: blur(14px);
+}
+.dark .atelier-prompt-lab > main > div:nth-child(2) {
+  background: radial-gradient(ellipse at 50% 0%, rgba(66,133,244,.035), transparent 60%);
+}
+.dark .atelier-prompt-lab > main > div:nth-child(2) > div {
+  max-width: 900px;
+}
+.dark .atelier-prompt-lab h1 {
+  font-size: clamp(24px, 3vw, 34px);
+  letter-spacing: -.045em;
+  line-height: 1.12;
+}
+.dark .atelier-prompt-lab button[class*="text-left"][class*="border"] {
+  background: linear-gradient(145deg, #1b2029, #171b22) !important;
+  border-color: #2c3441 !important;
+  padding: 17px !important;
+  transition: border-color .18s ease, transform .18s ease, background .18s ease;
+}
+.dark .atelier-prompt-lab button[class*="text-left"][class*="border"]:hover {
+  border-color: rgba(66,133,244,.55) !important;
+  background: #202733 !important;
+  transform: translateY(-2px);
+}
+.dark .atelier-skills-view > aside,
+.dark .atelier-connectors-view > aside {
+  width: 300px;
+  max-width: 38vw;
+}
+.dark .atelier-skills-view > main,
+.dark .atelier-connectors-view > main,
+.dark .atelier-tools-view > main {
+  background: transparent;
+}
+.dark .atelier-tools-view > div:first-child {
+  background: #151920 !important;
+  border-color: var(--atelier-border) !important;
+}
+.dark .atelier-view-shell input:not([type="checkbox"]):not([type="radio"]),
+.dark .atelier-view-shell textarea,
+.dark .atelier-view-shell select {
+  min-height: 36px;
+}
+.dark .atelier-view-shell input[type="checkbox"],
+.dark .atelier-view-shell input[type="radio"] {
+  accent-color: var(--atelier-blue);
+}
+.dark .atelier-view-shell .shadow-sm {
+  box-shadow: 0 2px 8px rgba(0,0,0,.16);
+}
+.dark .atelier-view-shell .bg-blue-50,
+.dark .atelier-view-shell .bg-blue-50\\/80 {
+  background-color: rgba(66,133,244,.12) !important;
+}
+.dark .atelier-view-shell .border-blue-200,
+.dark .atelier-view-shell .border-blue-500\\/30 {
+  border-color: rgba(66,133,244,.42) !important;
+}
+.dark .atelier-view-shell .hover\\:bg-slate-100:hover,
+.dark .atelier-view-shell .hover\\:bg-slate-100\\/80:hover,
+.dark .atelier-view-shell .hover\\:bg-slate-800\\/50:hover {
+  background-color: rgba(255,255,255,.045) !important;
+}
+
+@media (max-width: 900px) {
+  .dark .atelier-prompt-lab > aside { width: 220px; }
+  .dark .atelier-skills-view > aside,
+  .dark .atelier-connectors-view > aside { width: 250px; }
+}
+@media (max-width: 640px) {
+  .dark .atelier-prompt-lab > aside { display: none; }
+  .dark .atelier-skills-view > aside,
+  .dark .atelier-connectors-view > aside { width: 100%; max-width: none; max-height: 38vh; }
+  .dark .atelier-view-shell { overflow-y: auto; }
+}
