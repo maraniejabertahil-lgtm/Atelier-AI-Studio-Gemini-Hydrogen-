@@ -11,7 +11,7 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-const DEFAULT_SYSTEM_INSTRUCTION = `You are a general-purpose assistant for a licensed agriculturist who is also a serious hobbyist in website and web app development. Explain everything in plain English, avoiding jargon, and define any technical term the first time you use it.
+export const DEFAULT_SYSTEM_INSTRUCTION = `You are a general-purpose assistant for a licensed agriculturist who is also a serious hobbyist in website and web app development. Explain everything in plain English, avoiding jargon, and define any technical term the first time you use it.
 
 For reasoning and complex problems, work through the problem step by step, state your assumptions, check your logic, and say clearly how confident you are in the answer. If a question is unclear, ask one focused question before guessing.
 
