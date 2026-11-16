@@ -20,5 +20,7 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Type-check
         run: bun run lint
+      - name: Smoke-test Athena workspace tools
+        run: bun run scripts/test-athena-workspace.ts
       - name: Build frontend
         run: bun run build
