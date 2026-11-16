@@ -286,3 +286,25 @@
   .atelier-chat-pane { min-height: 62vh; border-right: 0; border-bottom: 1px solid var(--atelier-border); }
   .atelier-preview-pane { min-height: 55vh; }
 }
+
+
+/* iPad/tablet viewport fit: keep the studio inside the visible browser area,
+   while the conversation alone owns vertical scrolling above the composer. */
+html, body, #root { min-height: 0; }
+.atelier-app-shell { height: 100vh; height: 100dvh; min-height: 0; overflow: hidden; }
+.atelier-prompt-lab { min-height: 0; height: 100%; overflow: hidden; }
+.atelier-chat-pane { min-height: 0; height: 100%; overflow: hidden; }
+.atelier-chat-heading { flex: 0 0 auto; }
+.atelier-chat-scroll { min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.atelier-chat-pane > .p-4.border-t { flex: 0 0 auto; }
+.atelier-preview-pane { min-height: 0; overflow: hidden; }
+.atelier-preview-content { min-height: 0; overflow: auto; }
+@media (min-width: 641px) and (max-width: 1024px) {
+  .atelier-split-workspace { grid-template-columns: minmax(0, 42%) minmax(0, 58%); }
+  .atelier-chat-scroll { padding-left: 14px; padding-right: 14px; padding-top: 16px; padding-bottom: 16px; }
+  .atelier-chat-pane > .p-4.border-t { padding: 10px 12px; }
+  .atelier-chat-pane > .p-4.border-t .max-w-3xl { max-width: 100%; }
+}
+@media (max-height: 900px) {
+  .atelier-chat-pane > .p-4.border-t .max-w-3xl { gap: 8px; }
+}
