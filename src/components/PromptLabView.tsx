@@ -220,6 +220,7 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
   const [composerMode, setComposerMode] = useState<'chat' | 'terminal'>('chat');
   const [terminalOutput, setTerminalOutput] = useState('');
   const [terminalBusy, setTerminalBusy] = useState(false);
+  const [terminalToken, setTerminalToken] = useState('');
   const [liveVoiceOpen, setLiveVoiceOpen] = useState(false);
   const [visionaryOpen, setVisionaryOpen] = useState(false);
   const [mobileSettingsOpen, setMobileSettingsOpen] = useState(false);
@@ -864,12 +865,21 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
   const runTerminalCommand = async () => {
     const command = promptText.trim();
     if (!command || terminalBusy) return;
+    if (!terminalToken.trim()) {
+      setTerminalOutput((current) => current + 'Enter your terminal access token first.\n');
+      return;
+    }
     setTerminalBusy(true);
     setTerminalOutput((current) => current + (current ? '\n' : '') + '$ ' + command + '\n');
     setPromptText('');
     try {
-      const response = await fetch('/api/studio/terminal', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ command }) });
+      const response = await fetch('/api/studio/terminal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + terminalToken.trim() },
+        body: JSON.stringify({ command }),
+      });
       const data = await response.json() as { output?: string; error?: string };
+      if (response.status === 401) setTerminalToken('');
       setTerminalOutput((current) => current + (data.output || data.error || 'Command completed.') + '\n');
     } catch (error) {
       setTerminalOutput((current) => current + (error instanceof Error ? error.message : 'Terminal request failed.') + '\n');
@@ -1389,7 +1399,7 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
           </div>
         </div>
 
-        {composerMode === 'terminal' && <div className="atelier-terminal-output mx-3 mb-2 rounded-lg border border-slate-700 bg-[#0b1018] p-3 text-[11px] font-mono text-emerald-300 whitespace-pre-wrap max-h-36 overflow-y-auto">{terminalOutput || 'Project terminal · allowed: pwd, ls, git status, git log, npm run build, npm run lint'}</div>}
+        {composerMode === 'terminal' && <div className="atelier-terminal-output mx-3 mb-2 rounded-lg border border-slate-700 bg-[#0b1018] p-3 text-[11px] font-mono text-emerald-300 whitespace-pre-wrap max-h-48 overflow-y-auto"><div className="mb-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-400"><span>Authenticated project shell · bash · project-root working directory</span><button type="button" onClick={() => setTerminalOutput('')} className="text-slate-300 hover:text-white">Clear output</button></div>{terminalOutput || 'Full shell commands are enabled after terminal authentication. Each command starts in the project root; use cd path && command to work in a subfolder.'}</div>}
         {/* Bottom Prompt Composer */}
         <div className="p-4 border-t border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E]">
           <div className="max-w-3xl mx-auto space-y-2.5">
@@ -1462,8 +1472,23 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
                   <button type="button" onClick={() => setComposerMode('chat')} className={composerMode === 'chat' ? 'px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-[#252c38] text-slate-900 dark:text-white shadow-sm' : 'px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-500'}>Chat</button>
                   <button type="button" onClick={() => setComposerMode('terminal')} className={composerMode === 'terminal' ? 'px-2.5 py-1 rounded-md text-[11px] font-semibold bg-white dark:bg-[#252c38] text-emerald-600 dark:text-emerald-300 shadow-sm' : 'px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-500'}><Terminal className="inline w-3 h-3 mr-1"/>Terminal</button>
                 </div>
-                <span className="text-[10px] text-slate-500">{composerMode === 'terminal' ? 'Restricted project commands' : 'AI assistant'}</span>
+                <span className="text-[10px] text-slate-500">{composerMode === 'terminal' ? 'Private project shell' : 'AI assistant'}</span>
               </div>
+              {composerMode === 'terminal' && (
+                <div className="px-3 pt-2">
+                  <input
+                    type="password"
+                    value={terminalToken}
+                    onChange={(e) => setTerminalToken(e.target.value)}
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder="Terminal access token (STUDIO_TERMINAL_TOKEN)"
+                    aria-label="Terminal access token"
+                    className="w-full rounded-md border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-[#0b1018] px-3 py-2 text-xs font-mono text-slate-900 dark:text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="mt-1 text-[10px] text-slate-500">Set this secret in your hosting environment. Commands run on the server with your app's permissions.</p>
+                </div>
+              )}
               <textarea
                 rows={3}
                 value={promptText}
