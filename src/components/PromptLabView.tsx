@@ -399,6 +399,10 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
     const spec = getLocalModelSpec(activeSession.model);
     if (!spec) return;
 
+    setFallbackNotice(
+      'Athena 5.5 full mode is unavailable on in-browser models. This offline model cannot load the full prompt or run server tools; switch to a cloud Gemini model for Athena 5.5.'
+    );
+
     if (filesToSend.some((f) => !f.isText)) {
       setStreamError(
         'In-browser models only support text/code attachments (switch to a Gemini cloud model for images).'
@@ -426,9 +430,12 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
 
     // Keep system prompt + skills + recent history compact so 4 GB iPad 10 KV-cache never overflows RAM
     const customSys = activeSession.systemInstruction.trim();
-    const baseSys = customSys
-      ? customSys.slice(0, 550)
-      : 'You are a helpful plain-English assistant. Define technical terms simply and organize answers with short steps.';
+    const baseSys = [
+      'LOCAL MODEL LIMITATION: This small in-browser model does not load the full Athena 5.5 instruction file and cannot execute Athena workspace, browser, computer, shell, or external-service tools. Do not claim to have followed the full Athena 5.5 runtime or to have executed tools. For full Athena 5.5 behavior, select a cloud Gemini model.',
+      customSys
+        ? customSys.slice(0, 550)
+        : 'You are a helpful plain-English assistant. Define technical terms simply and organize answers with short steps.',
+    ].join('\n\n');
 
     const mountedIds = new Set(activeSession.activeSkillIds);
     const mountedSkills = state.skills.filter((s) => mountedIds.has(s.id));
