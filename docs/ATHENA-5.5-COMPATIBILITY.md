@@ -4,8 +4,9 @@ This document describes the host capabilities that are actually implemented. The
 
 ## Available without per-session setup
 
-- **Read / Write / Edit / Glob / Grep** — native Atelier function-call adapters backed by an isolated workspace at `data/athena-workspace`.
-  - Paths are relative to that workspace; absolute paths and path traversal are rejected.
+- **Read / Write / Edit / Glob / Grep** — native Atelier function-call adapters backed by a separate workspace for each Atelier session under `data/athena-workspace`.
+  - Session IDs are SHA-256 hashed for directory names; files from one chat session are not visible to another.
+  - Paths are relative to that session's workspace; absolute paths and path traversal are rejected.
   - Symbolic links are rejected.
   - Text files are limited to 256 KB; search results are bounded.
   - These tools cannot read or modify the Atelier application source tree, server secrets, or arbitrary host files.
@@ -29,9 +30,13 @@ This document describes the host capabilities that are actually implemented. The
 
 The in-browser SmolLM2 and Qwen models cannot load the 953 KB Athena instruction file or run server-side tools. Atelier labels this honestly in the local-model system context. Use a cloud Gemini model for Athena 5.5 behavior. Cloud execution still requires the existing `GEMINI_API_KEY` secret, and the full prompt must fit the selected model's actual request/context limits.
 
+## Free Render deployment limitations
+
+Render's free web services use an ephemeral filesystem. Session workspaces therefore work during the lifetime of the running instance, but their files are lost when the service restarts, spins down, or redeploys. Free web services cannot attach persistent disks. Free Postgres is not a permanent workaround: Render documents a 30-day expiry for its free database tier. If durable files are essential, use a paid persistent disk or an external durable storage service; neither is assumed or enabled by this adaptation.
+
 ## Deployment notes
 
-- The workspace is stored under `data/athena-workspace`. On an ephemeral host, mount `data` (or the workspace directory) to persistent storage if files must survive restarts or redeployments.
+- The workspace root is `data/athena-workspace`; on a free Render instance, treat it as temporary scratch space only.
 - Do not enable the existing terminal endpoint as a substitute for Bash. It is not a sandbox.
 - No provider/model IDs, selectors, model settings, or existing API integrations were changed by this adaptation.
 - The original `Athena 5.5.txt` file is intentionally not edited.
