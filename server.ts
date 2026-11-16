@@ -1890,7 +1890,7 @@ async function startServer() {
               let result: unknown = { error: 'Tool not found' };
               try {
                 if (entry?.kind === 'workspace') {
-                  result = executeAthenaWorkspaceTool(name, args);
+                  result = executeAthenaWorkspaceTool(name, args, session.id);
                 } else if (entry?.kind === 'skill_router') {
                   result = executeSkillRouterTool(args, state);
                 } else if (entry?.kind === 'memory') {
