@@ -1739,13 +1739,26 @@ async function startServer() {
     const activeSkills = state.skills.filter((s) => skillIds.has(s.id));
     const hasSkillRouter = activePlugins.some((p) => p.kind === 'skill_router');
     const hasStudioMemory = activePlugins.some((p) => p.kind === 'studio_memory');
-    const sysParts: string[] = [];
-    if (session.systemInstruction.trim()) sysParts.push(session.systemInstruction.trim());
+    const sysParts: string[] = [
+      ATHENA_GOVERNING_PROMPT,
+      ATHENA_RUNTIME_COMPATIBILITY,
+    ];
+    const liveSessionInstruction = session.systemInstruction.trim();
+    if (
+      liveSessionInstruction &&
+      liveSessionInstruction !== DEFAULT_SYSTEM_INSTRUCTION.trim()
+    ) {
+      sysParts.push(
+        `Session-specific preferences (subordinate to Athena 5.5):\n${liveSessionInstruction}`
+      );
+    }
     for (const sk of activeSkills) {
-      sysParts.push(`<!-- Skill: ${sk.filename} -->\n${sk.content.trim()}`);
+      sysParts.push(
+        `<!-- Skill: ${sk.filename} (subordinate to Athena 5.5) -->\n${sk.content.trim()}`
+      );
     }
     sysParts.push(
-      'You are in a real-time human voice conversation. Speak naturally, concisely, and warmly.'
+      'You are in a real-time human voice conversation. Speak naturally, concisely, and warmly. Use only tools actually registered in this Atelier live session.'
     );
     if (hasSkillRouter) {
       const catalog = state.skills
