@@ -3,6 +3,7 @@ import { dirname, resolve } from 'node:path';
 import type { StudioState } from '../src/types.ts';
 import { parseSkillFrontmatter } from '../src/lib/skillRouter.ts';
 import { getTwentyOneSkillPack } from './skillPack.ts';
+import { getClaudeSkillPack } from './claudeSkillPack.ts';
 
 const DATA_PATH = resolve(process.cwd(), 'data', 'studio-state.json');
 
@@ -20,10 +21,10 @@ Keep answers well organized with short headings or numbered steps. Avoid unneces
 
 export function createDefaultStudioState(): StudioState {
   const ts = nowIso();
-  const packSkills = getTwentyOneSkillPack();
+  const packSkills = [...getTwentyOneSkillPack(), ...getClaudeSkillPack()];
 
   return {
-    studioVersion: 6,
+    studioVersion: 7,
     skills: [
       ...packSkills,
       {
@@ -519,8 +520,8 @@ function migrateStudioState(parsed: StudioState): { state: StudioState; changed:
     }
   }
 
-  if ((parsed.studioVersion ?? 1) < 6) {
-    parsed.studioVersion = 6;
+  if ((parsed.studioVersion ?? 1) < 7) {
+    parsed.studioVersion = 7;
     changed = true;
     for (const sess of parsed.sessions) {
       if (!sess.activePluginIds.includes('plugin-skill-router')) {
