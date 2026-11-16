@@ -20,7 +20,7 @@ import {
   type Part,
   type Tool,
 } from '@google/genai';
-import { loadStudioState, saveStudioState } from './server/store.ts';
+import { DEFAULT_SYSTEM_INSTRUCTION, loadStudioState, saveStudioState } from './server/store.ts';
 import { getTwentyOneSkillPack } from './server/skillPack.ts';
 import {
   buildZipBuffer,
@@ -1014,9 +1014,10 @@ async function startServer() {
         ATHENA_GOVERNING_PROMPT,
         ATHENA_RUNTIME_COMPATIBILITY,
       ];
-      if (session.systemInstruction.trim()) {
+      const sessionInstruction = session.systemInstruction.trim();
+      if (sessionInstruction && sessionInstruction !== DEFAULT_SYSTEM_INSTRUCTION.trim()) {
         systemSections.push(
-          `Session-specific preferences (subordinate to Athena 5.5):\n${session.systemInstruction.trim()}`
+          `Session-specific preferences (subordinate to Athena 5.5):\n${sessionInstruction}`
         );
       }
       if (hasStudioMemory && state.memories.length > 0) {
