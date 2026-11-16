@@ -194,7 +194,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-[#0D1017] text-slate-900 dark:text-slate-100">
+    <div className="atelier-app-shell h-screen flex flex-col overflow-hidden bg-slate-50 dark:bg-[#0D1017] text-slate-900 dark:text-slate-100">
       <TopBar
         activeView={activeView}
         onSelectView={setActiveView}
