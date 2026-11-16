@@ -217,6 +217,9 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showInsertMenu, setShowInsertMenu] = useState(false);
   const [workspaceTab, setWorkspaceTab] = useState<'preview' | 'code'>('preview');
+  const [tabletPane, setTabletPane] = useState<'chat' | 'workspace'>(() =>
+    typeof window !== 'undefined' && window.matchMedia('(max-width: 1024px)').matches ? 'chat' : 'workspace'
+  );
   const [composerMode, setComposerMode] = useState<'chat' | 'terminal'>('chat');
   const [terminalOutput, setTerminalOutput] = useState('');
   const [terminalBusy, setTerminalBusy] = useState(false);
@@ -241,6 +244,13 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
   const recordedChunksRef = useRef<Blob[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 1024px)');
+    const handleChange = (event: MediaQueryListEvent) => setTabletPane(event.matches ? 'chat' : 'workspace');
+    media.addEventListener('change', handleChange);
+    return () => media.removeEventListener('change', handleChange);
+  }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({
@@ -887,7 +897,11 @@ export const PromptLabView: React.FC<PromptLabViewProps> = ({
   };
 
   return (
-    <div className="atelier-view-shell atelier-prompt-lab atelier-split-workspace flex-1 min-h-0 flex bg-slate-50 dark:bg-[#0D1017]">
+    <div className={`atelier-view-shell atelier-prompt-lab atelier-split-workspace ${tabletPane === 'chat' ? 'atelier-tablet-chat' : 'atelier-tablet-workspace'} flex-1 min-h-0 flex bg-slate-50 dark:bg-[#0D1017]`}>
+      <div className="atelier-tablet-switcher" role="group" aria-label="Tablet workspace view">
+        <button type="button" onClick={() => setTabletPane('chat')} aria-pressed={tabletPane === 'chat'}>Chat</button>
+        <button type="button" onClick={() => setTabletPane('workspace')} aria-pressed={tabletPane === 'workspace'}>Workspace</button>
+      </div>
       {/* LEFT RAIL: Prompt History & Quick Extension Summary */}
       <aside className="atelier-history-rail hidden lg:flex w-64 shrink-0 border-r border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#11151E] flex-col">
         <div className="p-3.5 border-b border-slate-200 dark:border-slate-800 space-y-2.5">
